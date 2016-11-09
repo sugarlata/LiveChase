@@ -1,0 +1,74 @@
+http://stormcast.com.au/viewimage.php?image=gfs.stormcast.bsch.init-2016110900z.fcst-201611091000z.ts.mel.null.0.png
+
+RECREATED URL
+http://stormcast.com.au/viewimage.php?image=gfs.stormcast.bsch.init-'$1'.fcst-'$2'.'$3'.mel.null.0.png
+
+GRIBUTC = 2016110900
+
+$1 = model run
+$2 = time
+$3 = type
+
+
+2016110906
+201611091600z
+
+
+2016110900
+201611091600z
+
+
+$1 comes from GRIBUTC Var at tope of page.
+$2 Comes from this line near the bottom:
+<img id="chartImage" src="http://stormcast.com.au/viewimage.php?image=gfs.stormcast.bsch.init-2016110906z.fcst-201611091600z.li.aus.null.0.png" width="750" height="645" alt="." usemap="#AusImageMap" OnClick="javascript:submit_form2();">
+
+.fcst-$2.
+
+Type is the following:
+
+
+
+
+CAPE (cape)
+LI (li)
+SI (si)
+Total Totals (totaltotals)
+SWEAT (sweat)
+K Index (kindex)
+Storm Probabilities (ts)
+Supercell Probability (scprob)
+1km Helicity (srh1km)
+3km Helicity (srh3km)
+Shear
+ - 10m (s10m)
+ - 950 (s950)
+ - 850 (s850)
+ - 700 (s700)
+ - 500 (s500)
+ - 300 (s300)
+Dew Point
+ - 2m (dpscreen)
+ - 975 (dp975)
+ - 950 (dp950)
+ - 925 (dp925)
+ - 900 (dp900)
+ - 850 (dp850)
+Relative Humidity
+ - 2m (rhbarbscreen)
+ - 925 (rhbarb925)
+ - 850 (rhbarb850)
+ - 700 (rhbarb700)
+ - 500 (rhbarb500)
+ - 300 (rhbarb300)
+Temp
+ - 2m (tscreen)
+ - 925 (t925)
+ - 850 (t850)
+ - 700 (t700)
+ - 500 (t500)
+ - 300 (t300)
+Rain (mslp)
+Low Cloud (cloud-low)
+Medium Cloud (cloud-mid)
+High Cloud (cloud-high)
+Total Cloud (cloud-total)

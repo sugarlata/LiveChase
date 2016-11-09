@@ -1,0 +1,48 @@
+42*3*8
+1008
+
+Model Run (3 most recent)
+First 8 times
+
+CAPE
+LI
+SI
+Total Totals
+SWEAT
+K Index
+Storm Probabilities
+Storm Probabilities 2.5
+Supercell Probability
+1km Helicity
+3km Helicity
+Shear
+ - 10m
+ - 950
+ - 850
+ - 700
+ - 500
+ - 300
+Dew Point
+ - 2m
+ - 975
+ - 950
+ - 925
+ - 900
+ - 850
+Relative Humidity
+ - 2m
+ - 925
+ - 850
+ - 700
+ - 500
+ - 300
+Temp
+ - 2m
+ - 925
+ - 850
+ - 700
+Rain
+Low Cloud
+Medium Cloud
+High Cloud
+Total Cloud

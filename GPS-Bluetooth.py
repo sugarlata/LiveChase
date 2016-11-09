@@ -1,5 +1,4 @@
 import serial
-import string
 from pynmea import nmea
 
 ser = serial.Serial()
