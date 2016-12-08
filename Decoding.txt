@@ -32,6 +32,8 @@ Type is the following:
 CAPE (cape)
 LI (li)
 SI (si)
+ML CAPE (mlcape)
+Best 4 Layer LI (4lli)
 Total Totals (totaltotals)
 SWEAT (sweat)
 K Index (kindex)
