@@ -61,6 +61,7 @@ def create_gps_csv():
 
             lat = gpgga.latitude
 
+            templat = lat.split(' ')
             d = lat[:2]
             m = lat[2:4]
             s = float(lat[4:]) * 60
@@ -153,3 +154,6 @@ def create_recent_kml():
     trk.stylemap.normalstyle.linestyle.width = 6
 
     kml.save(root_path + date_path + "\GPS\\" + kml_file)
+
+# create_gps_csv()
+create_recent_kml()
