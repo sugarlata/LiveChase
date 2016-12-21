@@ -55,9 +55,10 @@ def radar_kml(current_location):
                     os.chdir(root_path + date_path + "\\Radar\\" + fn[:6])
                 except WindowsError:
                     os.mkdir(root_path + date_path + "\\Radar\\" + fn[:6])
+                    os.chdir(root_path + date_path + "\\Radar\\" + fn[:6])
 
                 try:
-                    with open(fn) as f:
+                    with open(fn, 'r') as f:
                         pass
                 except IOError:
                     print "Downloading:", fn
