@@ -16,10 +16,13 @@ def find_mean(value_list):
 
 #r = png.Reader("C:\Users\Nathan\Documents\Storm Chasing\\temp\IDR023.T.201112250700.png")
 
-r = png.Reader("C:\Users\Nathan\Documents\Storm Chasing\Chases\\2016-12-21\Radar\IDR023\IDR023.T.201612211100.png")
+#r = png.Reader("C:\Users\Nathan\Documents\Storm Chasing\Chases\\2016-12-21\Radar\IDR023\IDR492.T.201510310930.png")
+
+# r = png.Reader("C:\Users\Nathan\Desktop\\15-10-31 Chase Log\Radar\IDR492\IDR492.T.201510311130.png")
+
+r = png.Reader("C:\Users\Nathan\Documents\Storm Chasing\\temp\IDR023.T.201112250506.png")
 
 read = r.read()
-
 
 # Load into Numpy Array based on intensity 1-16
 
@@ -136,7 +139,7 @@ cluster_skip = []
 
 for i in range(1, biggest + 1):
     print i, (items == i).sum()
-    if (items == i).sum() < 60:
+    if (items == i).sum() < 30:  # 60 for 128km, 30 for 256kms
         radar_matrix_first = copy(items)
         radar_matrix_binary[radar_matrix_first == i] = 0
         radar_matrix_binary[radar_matrix_binary > 0] = 1
