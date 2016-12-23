@@ -6,8 +6,23 @@ import png
 
 from math import fabs
 from skimage import measure
+from scipy import ndimage
 from matplotlib import pyplot as plt
 print "Finished Imports"
+
+
+class Centroid:
+
+    x = 0
+    y = 0
+    cluster_number = 0
+
+    def __init__(self, cluster_number, x, y):
+
+        self.cluster_number = cluster_number
+        self.x = x
+        self.y = y
+
 
 class RadarFrameAnalysis:
     matrix_radar_initial_load = ""
@@ -19,6 +34,7 @@ class RadarFrameAnalysis:
     cells_labels = ""
     radar_path = ""
     time_start = ""
+    file_code = ""
     time_end = ""
     pixel_wh = ""
 
@@ -26,6 +42,7 @@ class RadarFrameAnalysis:
 
         # Initialise the object with filename and unix time.
         self.radar_path = radar_path
+        self.file_code = os.path.basename(radar_path).split('.')[2]
         self.time_start = ar.get(os.path.basename(radar_path).split('.')[2], 'YYYYMMDDHHmm').timestamp
         self.pixels_wh = 512
 
@@ -111,7 +128,8 @@ class RadarFrameAnalysis:
         self.matrix_radar_working = np.copy(self.matrix_radar_initial_load)
 
         # Work through the working matrix, substitute the PNG palette for intensity values
-        for k, v in palette_key.iteritems(): self.matrix_radar_working[self.matrix_radar_working == k] = v
+        for k, v in palette_key.iteritems():
+            self.matrix_radar_working[self.matrix_radar_working == k] = v
 
         # Zero everything else
         temp_matrix = np.asarray(self.matrix_radar_working)
@@ -123,23 +141,16 @@ class RadarFrameAnalysis:
         # Copy matrix into final
         self.matrix_radar_finished = np.flipud(temp_matrix)
 
-    def get_radar_blobs_from_matrix(self):
+    def get_radar_blobs_from_matrix(self, threshold, pixel_threshold):
+        # Need to figure out what size clusters to throw out
+        # Suggestion is 30 for 256kms, 60 for 128kms and 90 for 64kms
 
-        x = []
-        y = []
-        z = []
-
-        # Need to create three arrays for x, y and z values separately, where z is intensity
-        for i in range(0, 512):
-            for j in range(0, 512):
-                if self.matrix_radar_finished[i][j] > 4:
-                    x.append(j)
-                    y.append(i)
-                    z.append(self.matrix_radar_finished[i][j])
+        # Threshold is not for intial identification of cells, this is done by listing intensity above 4
+        # Threshold is for what intensity would like to be kept in the matrix
 
         # This is the threshold for identifying storms, i.e. Radar intensity above this will be I.D.ed as a storm cell
-        threshold = 4
         radar_matrix_binary = np.copy(self.matrix_radar_finished)
+
 
         # For elements above threshold, make value of 1
         radar_matrix_binary[self.matrix_radar_finished > threshold] = 1
@@ -150,25 +161,38 @@ class RadarFrameAnalysis:
         # Need to identify the blobs, this is done by the measure function.
         self.matrix_radar_working = measure.label(radar_matrix_binary)
 
-        # Sometimes there are patches which are identified as separate blobs, but are the same.
+        # Very complicated bit of code to figure out whether a cluster is actually not rain
+        cluster_list = self.matrix_radar_working.ptp()
+        for i in range(0, cluster_list + 1):
+            if len(self.matrix_radar_finished[self.matrix_radar_working == i]) > pixel_threshold:
+                ave_intensity = float((self.matrix_radar_finished[self.matrix_radar_working == i]).sum()) /\
+                      len(self.matrix_radar_finished[self.matrix_radar_working == i])
+                if ave_intensity < 5:
+                    self.matrix_radar_working[self.matrix_radar_working == i] = 0
+
+
+
         # This code removes these 'patches' to create homogeneous blobs.
         radar_matrix_binary = np.copy(self.matrix_radar_working)
         radar_matrix_binary[radar_matrix_binary > 0] = 1
         radar_matrix_binary[radar_matrix_binary < 1] = 0
         self.matrix_radar_working = measure.label(radar_matrix_binary)
 
+        # Very complicated bit of code to figure out whether a cluster is actually not rain
+        cluster_list = self.matrix_radar_working.ptp()
+        for i in range(0, cluster_list + 1):
+            if len(self.matrix_radar_finished[self.matrix_radar_working == i]) > pixel_threshold:
+                ave_intensity = float((self.matrix_radar_finished[self.matrix_radar_working == i]).sum()) / \
+                                len(self.matrix_radar_finished[self.matrix_radar_working == i])
+                if ave_intensity < 5:
+                    self.matrix_radar_working[self.matrix_radar_working == i] = 0
+
+
         # Identify the number of clusters
         max_number_of_clusters_found = self.matrix_radar_working.ptp()
 
-        # Some clusters are too small, consist of only a few pixels. This is to create a list to remove said clusters.
-        cluster_skip = []
-
-        # Need to figure out what size clusters to throw out
-        # Suggestion is 30 for 256kms, 60 for 128kms and 90 for 64kms
-        pixel_threshold = 30
-
         # Cycle through each cluster
-        for i in range(1, max_number_of_clusters_found + 1):
+        for i in range(0, max_number_of_clusters_found + 1):
 
             # Print cluster ID and number of pixels.
             # print i, (self.matrix_radar_working == i).sum()
@@ -183,30 +207,173 @@ class RadarFrameAnalysis:
 
         self.matrix_radar_working = measure.label(radar_matrix_binary)
 
+        # Very complicated bit of code to figure out whether a cluster is actually not rain
+        cluster_list = self.matrix_radar_working.ptp()
+        for i in range(0, cluster_list + 1):
+            if len(self.matrix_radar_finished[self.matrix_radar_working == i]) > pixel_threshold:
+                ave_intensity = float((self.matrix_radar_finished[self.matrix_radar_working == i]).sum()) / \
+                                len(self.matrix_radar_finished[self.matrix_radar_working == i])
+                if ave_intensity < 5:
+                    self.matrix_radar_working[self.matrix_radar_working == i] = 0
+
         self.matrix_radar_working = np.flipud(self.matrix_radar_working)
 
-        self.matrix_radar_finished = np.copy(self.matrix_radar_working)
+        self.matrix_radar_blobs = np.copy(self.matrix_radar_working)
 
     def make_nice_pics(self):
 
         save_path = os.path.dirname(self.radar_path)
         fn = "Blob-" + os.path.basename(self.radar_path).split('.')[2] + ".png"
-        plt.imshow(self.matrix_radar_finished, cmap='spectral')
+        plt.imshow(self.matrix_radar_blobs, cmap='spectral')
         plt.savefig(save_path + "\\" + fn)
         plt.close()
 
-list_of_files_to_analyse = []
-base_path = "C:\Users\Nathan\Documents\Storm Chasing\\temp\\"
-for files in os.listdir(base_path):
-    if files[:3] == "IDR":
-        list_of_files_to_analyse.append(files)
+    def find_centroids(self):
 
-j = 0
-k = len(list_of_files_to_analyse)
-for i in list_of_files_to_analyse:
-    j += 1
-    print str(int(round(100.0*j/k,0))) + "% Completed"
-    radar1 = RadarFrameAnalysis(base_path + i)
-    radar1.load_png_into_matrix()
-    radar1.get_radar_blobs_from_matrix()
-    radar1.make_nice_pics()
+        # Load Matrix to work with
+        working_matrix = self.matrix_radar_blobs
+
+        # Return number of clusters
+        cluster_max_index = working_matrix.ptp()
+
+        # Create array to hold centroid objects
+        list_of_centroids = []
+
+        # Un comment to see visually the centroids
+        # x = []
+        # y = []
+
+        # Cycle through all clusters
+        for i in range(0, cluster_max_index + 1):
+
+            # Load working matrix for editing
+            temp_matrix = np.copy(working_matrix)
+
+            # Isolate cluster that matches the iteration, set elements to 1
+            temp_matrix[working_matrix == i] = 1
+
+            # Zero everything else
+            temp_matrix[working_matrix != i] = 0
+
+            # Flip matrix for ave_intensity caluculations
+            temp_matrix = np.flipud(temp_matrix)
+
+            # Check if the cluster is a zero cluster
+            if len(self.matrix_radar_finished[temp_matrix == 1]) == 0:
+                continue
+            # Calculate average intensity
+            ave_intensity = float((self.matrix_radar_finished[temp_matrix == 1]).sum()) / len(self.matrix_radar_finished[temp_matrix == 1])
+
+            # If ave intensity less than four, its a no rain area and don't want centroid
+            if ave_intensity < 4:
+                continue
+
+            # Flip back for centre of mass calculations
+            temp_matrix = np.flipud(temp_matrix)
+
+            # Calculate the centroid
+            yx = ndimage.measurements.center_of_mass(temp_matrix)
+
+            list_of_centroids.append(Centroid(i,yx[1],yx[0]))
+
+            # Un comment to see visually the centroids
+            # x.append(yx[1])
+            # y.append(yx[0])
+
+        # Assign list to object variable
+        self.cluster_centroids = list_of_centroids
+
+        # Un comment to see visually the centroids
+        # plt.imshow(self.matrix_radar_blobs, cmap='spectral')
+        # plt.scatter(x,y,s=50, marker ='v')
+        # plt.show()
+
+class TrackSlice:
+
+    start_type = ""
+    end_type = ""
+    cell_id = ""
+    start_ids = ""
+    end_ids = ""
+    polygon_points = ""
+
+    def __init__(self, points, cell_id):
+
+        self.polygon_points = points
+        self.cell_id = cell_id
+
+
+class SCIT:
+
+    list_of_frame_matrix_objects = []
+    base_path = ""
+
+    def __init__(self, basepath):
+
+        self.base_path = basepath
+
+    def load_matrices(self, threshold, pixel_threshold):
+
+        list_of_files_to_analyse = []
+
+        # Create a list of radar frames to analyse
+        # The frames have the first three letters IDR
+        for files in os.listdir(base_path):
+            if files[:3] == "IDR":
+                list_of_files_to_analyse.append(files)
+
+        j = 0
+        k = len(list_of_files_to_analyse)
+        print "Begin Creating Matrices"
+
+        # For each file in the base path
+        for i in list_of_files_to_analyse:
+
+            # Print out the percentage completed, this process can take a while
+            print str(int(round(100.0*j/k, 0))) + "% Completed"
+
+            # Create the
+            self.list_of_frame_matrix_objects.insert(j, RadarFrameAnalysis(base_path + i))
+            self.list_of_frame_matrix_objects[j].load_png_into_matrix()
+
+            # Threshold of 4 is best
+            # Pixel threshold of 90 for 64km, 60 for 128km, 30 for 256km
+            self.list_of_frame_matrix_objects[j].get_radar_blobs_from_matrix(threshold, pixel_threshold)
+            j += 1
+
+    def identify_tracks(self):
+
+        for i in self.list_of_frame_matrix_objects:
+            i.find_centroids()
+
+
+    def create_pretty_pictures(self):
+
+        i = 0
+        j = len(self.list_of_frame_matrix_objects)
+        for matrix_radar_iter_object in self.list_of_frame_matrix_objects:
+            fn = os.path.dirname(matrix_radar_iter_object.radar_path) + "\Blob-" + matrix_radar_iter_object.file_code\
+                 + ".png"
+            print fn
+            try:
+
+                with open(fn):
+                    print "Pretty picture already created for", matrix_radar_iter_object.radar_path
+            except IOError:
+                matrix_radar_iter_object.make_nice_pics()
+
+            print str(int(round(100.0*i/j, 0))) + "% Completed"
+            i += 1
+
+
+
+
+base_path = "C:\Users\Nathan\Documents\Storm Chasing\\temp2\\"
+#base_path = "C:\Users\Nathan\Documents\Storm Chasing\Chases\\2016-12-23\Radar\IDR723\\"
+
+main_scit = SCIT(base_path)
+print "Begin loading matrices"
+main_scit.load_matrices(4, 60)
+# print "Begin creating pictures"
+# main_scit.create_pretty_pictures()
+main_scit.identify_tracks()

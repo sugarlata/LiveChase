@@ -14,7 +14,9 @@ def radar_kml(current_location):
 
     ftpaddy = 'ftp2.bom.gov.au'
     ftpcwd = '/anon/gen/radar/'
-    framecode = ["024", "023", "022", "494", "493", "492", "02I", "49I"]
+    framecode = ["723"]
+
+    #framecode = ["024", "023", "022", "494", "493", "492", "02I", "49I"]
 
     root_path = "C:\Users\Nathan\Documents\Storm Chasing\Chases\\"
     date_path = arrow.now().format('YYYY-MM-DD')
