@@ -5,6 +5,12 @@ import os
 import png
 
 from math import fabs
+from math import sqrt
+from math import atan2
+from math import sin
+from math import pi
+from math import cos
+from math import degrees
 from skimage import measure
 from scipy import ndimage
 from matplotlib import pyplot as plt
@@ -29,6 +35,7 @@ class RadarFrameAnalysis:
     matrix_radar_working = ""
     matrix_radar_finished = ""
     matrix_radar_blobs = ""
+    list_of_track_slices = []
     cluster_centroids = ""
     matrix_radar_cells = ""
     cells_labels = ""
@@ -155,7 +162,7 @@ class RadarFrameAnalysis:
         # For elements above threshold, make value of 1
         radar_matrix_binary[self.matrix_radar_finished > threshold] = 1
         # All other elements equal zero
-        radar_matrix_binary[self.matrix_radar_finished < threshold + 1] = 0
+        radar_matrix_binary[self.matrix_radar_finished <= threshold] = 0
 
         # Now there is a binary matrix of cells and not cells.
         # Need to identify the blobs, this is done by the measure function.
@@ -288,19 +295,21 @@ class RadarFrameAnalysis:
         # plt.scatter(x,y,s=50, marker ='v')
         # plt.show()
 
+
 class TrackSlice:
 
-    start_type = ""
-    end_type = ""
     cell_id = ""
-    start_ids = ""
-    end_ids = ""
+    cluster_number = ""
+    start_ids = []
+    end_ids = []
     polygon_points = ""
+    volume = 0
+    volume_matrix = ""
 
-    def __init__(self, points, cell_id):
+    def __init__(self, cell_id, cluster_number):
 
-        self.polygon_points = points
         self.cell_id = cell_id
+        self.cluster_number = cluster_number
 
 
 class SCIT:
@@ -341,10 +350,196 @@ class SCIT:
             self.list_of_frame_matrix_objects[j].get_radar_blobs_from_matrix(threshold, pixel_threshold)
             j += 1
 
+    def calc_dist(self, p1x, p1y, p2x, p2y):
+        return sqrt(pow((p1x - p2x), 2) + pow((p1y - p2y), 2))
+
+    def calc_dir(self, x1, y1, x2, y2):
+        angle = degrees(atan2(y2 - y1, x2 - x1))
+        direction = (90 - angle) % 360
+        return direction
+
+    def return_single_cluster(self, input_cluster, n):
+        out_cluster = np.copy(input_cluster)
+
+        # For elements above threshold, make value of 1
+        out_cluster[input_cluster == n] = n
+        # All other elements equal zero
+        out_cluster[input_cluster != n] = 0
+        return out_cluster
+
+    def return_binary(self, input_cluster):
+        binary_matrix = np.copy(input_cluster)
+        # For elements above threshold, make value of 1
+        binary_matrix[input_cluster > 0] = 1
+        # All other elements equal zero
+        binary_matrix[input_cluster <= 0] = 0
+        return binary_matrix
+
     def identify_tracks(self):
 
+        
+        # Function to calculate the distance between two pixels. Assuming Flat Earth (makes the math easier)
+
+        # Loop to create centroid objects
         for i in self.list_of_frame_matrix_objects:
             i.find_centroids()
+
+        # Begin loop to create track slices through all frames
+        for j in self.list_of_frame_matrix_objects:
+            print j.file_code
+            print len(self.list_of_frame_matrix_objects[0].list_of_track_slices)
+            print len(self.list_of_frame_matrix_objects[1].list_of_track_slices)
+            print len(self.list_of_frame_matrix_objects[2].list_of_track_slices)
+            print len(j.cluster_centroids)
+            for i in j.cluster_centroids:
+                # Short hand version of the cluster number
+                cluster_number_short = i.cluster_number
+                # Long hand (three digits, preceding zeroes for id
+                cluster_number = "%03d" % (i.cluster_number,)
+    
+                # File Code + Cluster Number is the Cell ID
+                cell_id = str(j.file_code) + cluster_number
+                self.list_of_frame_matrix_objects[0].list_of_track_slices.insert(0, TrackSlice(cell_id, cluster_number))
+    
+                # Create a matrix for the individual cell
+                matrix_blob = np.copy(j.matrix_radar_blobs)
+                matrix_blob[j.matrix_radar_blobs != cluster_number_short] = 0
+                #j.list_of_track_slices[0].polygon_points = matrix_blob
+    
+                # Calculate the volume according to intensity
+                volume_matrix = np.multiply(matrix_blob, np.flipud(j.matrix_radar_finished))
+                #j.list_of_track_slices[0].volume_matrix = volume_matrix
+                volume = np.sum(volume_matrix)
+                #j.list_of_track_slices[0].volume_matrix = volume
+
+        # Create dictionary for the track objects in form:
+
+        # self.list_of_frame_matrix_objects[j].list_of_track_slices[i]
+        # j = YYYYMMDDHHmm:list index
+        # i = cluster_number:list index
+
+        track_slice_dictionary = {}
+        j=0
+        track_slice_dictionary[str(self.list_of_frame_matrix_objects[j].file_code)] = {}
+        for i in range(0, len(self.list_of_frame_matrix_objects[j].list_of_track_slices)):
+            track_slice_dictionary[str(self.list_of_frame_matrix_objects[j].file_code)][self.list_of_frame_matrix_objects[j].list_of_track_slices[i].cluster_number] = i
+
+        print "Begin Manual List print"
+        for i in range(0,len(self.list_of_frame_matrix_objects[0].list_of_track_slices)):
+            print i, self.list_of_frame_matrix_objects[0].list_of_track_slices[i].cell_id
+        print
+        print track_slice_dictionary
+
+
+        exit()
+        # Begin Loop to analyse
+        # Need to calculate the average distance
+        # Calculate the distance between each centroid from one frame to the next, keep the shortest one
+        # TODO Need to cycle through all the images on the list, instead of just these two
+        centroid_list_n = self.list_of_frame_matrix_objects[0].cluster_centroids
+        centroid_list_n_1 = self.list_of_frame_matrix_objects[1].cluster_centroids
+
+        centroid_couples = []
+
+        for i in centroid_list_n:
+            distance_array = []
+            for j in centroid_list_n_1:
+                distance_array.append([self.calc_dist(i.x, i.y, j.x, j.y),0, [i, j]])
+
+            centroid_couples.append(min(distance_array))
+
+        centroid_couples = np.asarray(centroid_couples)
+
+        std = centroid_couples[:,0].std()
+
+        # TODO Code in how to handle standard deviation for different radar ranges, 64km, 128km, 256km
+        while std > 10:  # This will change depending on the range of the radar
+            # Remove the centroid couple that has the largest distance.
+            centroid_couples = centroid_couples[~(centroid_couples==max(centroid_couples[:,0])).any(1)]
+            std = centroid_couples[:,0].std()
+
+        # This is the average distance.
+        average_distance = np.average(centroid_couples[:,0].tolist())
+
+        # Now need to find the average direction
+        # Direction will be a number between 0 and 360
+
+        # For each centroid pair, calculate the direction
+        for i in range(0,len(centroid_couples)):
+            x1 = centroid_couples[i][2][0].x
+            y1 = centroid_couples[i][2][0].y
+            x2 = centroid_couples[i][2][1].x
+            y2 = centroid_couples[i][2][1].y
+            centroid_couples[i][1] = self.calc_dir(x1, y1, x2, y2)
+
+        dir_list = []
+        # Put all directions in a list, for some reason .average() isn't working for the array
+        for i in centroid_couples[:,1]:
+            dir_list.append(i)
+
+        # Find the std dev and the average
+        std = np.asarray(dir_list).std()
+        ave = np.average(dir_list)
+
+        while std > 30:  # This will change depending on the range of the radar
+
+            ave = np.average(dir_list)
+            # Biggest outlier is the one that is furtherest from the average
+            biggest_outlier = centroid_couples[(np.fabs(np.asarray(dir_list) - ave) == max(np.fabs(np.asarray(dir_list)
+                                                                                                   - ave)))][0][1]
+            # Remove the centroid couple that contains the biggest outlier
+            centroid_couples = centroid_couples[~(centroid_couples == biggest_outlier).any(1)]
+            # Remove it from the directions list
+            dir_list.remove(biggest_outlier)
+            # Calculate the new std dev.
+            std = np.asarray(dir_list).std()
+
+        # This is the average direction
+        average_direction = ave
+
+        print
+        print "Centroid Couples Distance and Direction"
+        for i in centroid_couples:
+            print i[0], i[1], i[2]
+        print
+        print "Average Distance:", average_distance
+        print "Average Direction:", average_direction
+
+        x1 = []
+        y1 = []
+        # x2 = []
+        # y2 = []
+        labels = []
+
+        for i in self.list_of_frame_matrix_objects[0].cluster_centroids:
+            x1.append(i.x)
+            y1.append(512-i.y)
+            # x2.append(i[2][1].x)
+            # y2.append(i[2][1].y)
+            # labels.append(i[1])
+
+        xshift = int(round(average_distance * sin((90 + 2 * (90 - average_direction)) * pi / 180),0))
+        yshift = int(round(average_distance * sin((90 + 2 * (90 - average_direction)) * pi / 180),0))
+
+        shifted = ndimage.shift(self.return_single_cluster(self.list_of_frame_matrix_objects[0].matrix_radar_blobs, 12), (yshift, xshift))
+        n_1 = self.list_of_frame_matrix_objects[1].matrix_radar_blobs
+
+        shifted = self.return_binary(shifted)
+        n_1_binary = self.return_binary(n_1)
+
+        overlap = np.copy(n_1)
+
+        overlap[np.equal(n_1_binary, shifted)==False] = 0
+
+        # plt.imshow(self.list_of_frame_matrix_objects[1].matrix_radar_blobs, cmap='spectral')
+        # plt.imshow(shifted, cmap='spectral', alpha=.3)
+
+        # plt.imshow(n_1_binary, cmap='spectral')
+        # plt.imshow(shifted, cmap='spectral', alpha=.3)
+
+        # plt.imshow(overlap, cmap='spectral')
+
+        
 
 
     def create_pretty_pictures(self):
@@ -369,11 +564,11 @@ class SCIT:
 
 
 base_path = "C:\Users\Nathan\Documents\Storm Chasing\\temp2\\"
-#base_path = "C:\Users\Nathan\Documents\Storm Chasing\Chases\\2016-12-23\Radar\IDR723\\"
+#base_path = "C:\Users\Nathan\Documents\Storm Chasing\Chases\\2016-12-24\Radar\IDR023\\"
 
 main_scit = SCIT(base_path)
 print "Begin loading matrices"
 main_scit.load_matrices(4, 60)
 # print "Begin creating pictures"
-# main_scit.create_pretty_pictures()
+#main_scit.create_pretty_pictures()
 main_scit.identify_tracks()

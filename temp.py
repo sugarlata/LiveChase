@@ -62,7 +62,7 @@ distance = np.asarray(total_points)
 print "STD DEV"
 std = distance.std()
 
-while std > 5:
+while std > 10:
     max_dist_matrix = distance < max(distance)
     distance = distance[max_dist_matrix]
     print

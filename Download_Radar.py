@@ -14,7 +14,7 @@ def radar_kml(current_location):
 
     ftpaddy = 'ftp2.bom.gov.au'
     ftpcwd = '/anon/gen/radar/'
-    framecode = ["723"]
+    framecode = ["023", "024"]
 
     #framecode = ["024", "023", "022", "494", "493", "492", "02I", "49I"]
 
@@ -92,7 +92,11 @@ def radar_kml(current_location):
 
             radar_db = RadarDB(k[:6])
 
-            idr_frame_list = os.listdir(root_path + date_path + "\\Radar\\" + k[:6])
+            idr_frame_list = []
+
+            for i in os.listdir(root_path + date_path + "\\Radar\\" + k[:6]):
+                if i[:3]=="IDR":
+                    idr_frame_list.append(i)
 
             for i in range(0, len(idr_frame_list)):
                 filename = idr_frame_list[i]
