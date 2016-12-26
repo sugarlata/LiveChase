@@ -19,33 +19,25 @@ print "Finished Imports"
 
 class Centroid:
 
-    x = 0
-    y = 0
-    cluster_number = 0
-
     def __init__(self, cluster_number, x, y):
-
         self.cluster_number = cluster_number
         self.x = x
         self.y = y
 
 
 class RadarFrameAnalysis:
-    matrix_radar_initial_load = ""
-    matrix_radar_working = ""
-    matrix_radar_finished = ""
-    matrix_radar_blobs = ""
-    list_of_track_slices = []
-    cluster_centroids = ""
-    matrix_radar_cells = ""
-    cells_labels = ""
-    radar_path = ""
-    time_start = ""
-    file_code = ""
-    time_end = ""
-    pixel_wh = ""
 
     def __init__(self, radar_path):
+
+        self.matrix_radar_initial_load = ""
+        self.matrix_radar_working = ""
+        self.matrix_radar_finished = ""
+        self.matrix_radar_blobs = ""
+        self.list_of_track_slices = []
+        self.cluster_centroids = ""
+        self.matrix_radar_cells = ""
+        self.cells_labels = ""
+        self.time_end = ""
 
         # Initialise the object with filename and unix time.
         self.radar_path = radar_path
@@ -298,15 +290,13 @@ class RadarFrameAnalysis:
 
 class TrackSlice:
 
-    cell_id = ""
-    cluster_number = ""
-    start_ids = []
-    end_ids = []
-    polygon_points = ""
-    volume = 0
-    volume_matrix = ""
-
     def __init__(self, cell_id, cluster_number):
+        
+        self.start_ids = []
+        self.end_ids = []
+        self.polygon_points = ""
+        self.volume = 0
+        self.volume_matrix = ""
 
         self.cell_id = cell_id
         self.cluster_number = cluster_number
@@ -314,11 +304,9 @@ class TrackSlice:
 
 class SCIT:
 
-    list_of_frame_matrix_objects = []
-    base_path = ""
-
     def __init__(self, basepath):
 
+        self.list_of_frame_matrix_objects = []
         self.base_path = basepath
 
     def load_matrices(self, threshold, pixel_threshold):
@@ -350,31 +338,6 @@ class SCIT:
             self.list_of_frame_matrix_objects[j].get_radar_blobs_from_matrix(threshold, pixel_threshold)
             j += 1
 
-    def calc_dist(self, p1x, p1y, p2x, p2y):
-        return sqrt(pow((p1x - p2x), 2) + pow((p1y - p2y), 2))
-
-    def calc_dir(self, x1, y1, x2, y2):
-        angle = degrees(atan2(y2 - y1, x2 - x1))
-        direction = (90 - angle) % 360
-        return direction
-
-    def return_single_cluster(self, input_cluster, n):
-        out_cluster = np.copy(input_cluster)
-
-        # For elements above threshold, make value of 1
-        out_cluster[input_cluster == n] = n
-        # All other elements equal zero
-        out_cluster[input_cluster != n] = 0
-        return out_cluster
-
-    def return_binary(self, input_cluster):
-        binary_matrix = np.copy(input_cluster)
-        # For elements above threshold, make value of 1
-        binary_matrix[input_cluster > 0] = 1
-        # All other elements equal zero
-        binary_matrix[input_cluster <= 0] = 0
-        return binary_matrix
-
     def identify_tracks(self):
 
         
@@ -386,20 +349,16 @@ class SCIT:
 
         # Begin loop to create track slices through all frames
         for j in self.list_of_frame_matrix_objects:
-            print j.file_code
-            print len(self.list_of_frame_matrix_objects[0].list_of_track_slices)
-            print len(self.list_of_frame_matrix_objects[1].list_of_track_slices)
-            print len(self.list_of_frame_matrix_objects[2].list_of_track_slices)
-            print len(j.cluster_centroids)
+
             for i in j.cluster_centroids:
                 # Short hand version of the cluster number
                 cluster_number_short = i.cluster_number
                 # Long hand (three digits, preceding zeroes for id
-                cluster_number = "%03d" % (i.cluster_number,)
+                cluster_number = i.cluster_number
     
                 # File Code + Cluster Number is the Cell ID
-                cell_id = str(j.file_code) + cluster_number
-                self.list_of_frame_matrix_objects[0].list_of_track_slices.insert(0, TrackSlice(cell_id, cluster_number))
+                cell_id = str(j.file_code) + str(cluster_number)
+                j.list_of_track_slices.insert(0, TrackSlice(cell_id, cluster_number))
     
                 # Create a matrix for the individual cell
                 matrix_blob = np.copy(j.matrix_radar_blobs)
@@ -419,19 +378,17 @@ class SCIT:
         # i = cluster_number:list index
 
         track_slice_dictionary = {}
-        j=0
-        track_slice_dictionary[str(self.list_of_frame_matrix_objects[j].file_code)] = {}
-        for i in range(0, len(self.list_of_frame_matrix_objects[j].list_of_track_slices)):
-            track_slice_dictionary[str(self.list_of_frame_matrix_objects[j].file_code)][self.list_of_frame_matrix_objects[j].list_of_track_slices[i].cluster_number] = i
+        for j in range(0, len(self.list_of_frame_matrix_objects)):
+            track_slice_dictionary[str(self.list_of_frame_matrix_objects[j].file_code)] = {}
+            for i in range(0, len(self.list_of_frame_matrix_objects[j].list_of_track_slices)):
+                track_slice_dictionary[str(self.list_of_frame_matrix_objects[j].file_code)][
+                    self.list_of_frame_matrix_objects[j].list_of_track_slices[i].cluster_number] = i
 
-        print "Begin Manual List print"
-        for i in range(0,len(self.list_of_frame_matrix_objects[0].list_of_track_slices)):
-            print i, self.list_of_frame_matrix_objects[0].list_of_track_slices[i].cell_id
-        print
-        print track_slice_dictionary
+        # For printing out the dictionary
+        # for j in track_slice_dictionary:
+        #     for i in track_slice_dictionary[j]:
+        #         print j, i, track_slice_dictionary[j][i]
 
-
-        exit()
         # Begin Loop to analyse
         # Need to calculate the average distance
         # Calculate the distance between each centroid from one frame to the next, keep the shortest one
@@ -444,7 +401,7 @@ class SCIT:
         for i in centroid_list_n:
             distance_array = []
             for j in centroid_list_n_1:
-                distance_array.append([self.calc_dist(i.x, i.y, j.x, j.y),0, [i, j]])
+                distance_array.append([calc_dist(i.x, i.y, j.x, j.y),0, [i, j]])
 
             centroid_couples.append(min(distance_array))
 
@@ -470,7 +427,7 @@ class SCIT:
             y1 = centroid_couples[i][2][0].y
             x2 = centroid_couples[i][2][1].x
             y2 = centroid_couples[i][2][1].y
-            centroid_couples[i][1] = self.calc_dir(x1, y1, x2, y2)
+            centroid_couples[i][1] = calc_dir(x1, y1, x2, y2)
 
         dir_list = []
         # Put all directions in a list, for some reason .average() isn't working for the array
@@ -521,23 +478,61 @@ class SCIT:
         xshift = int(round(average_distance * sin((90 + 2 * (90 - average_direction)) * pi / 180),0))
         yshift = int(round(average_distance * sin((90 + 2 * (90 - average_direction)) * pi / 180),0))
 
-        shifted = ndimage.shift(self.return_single_cluster(self.list_of_frame_matrix_objects[0].matrix_radar_blobs, 12), (yshift, xshift))
-        n_1 = self.list_of_frame_matrix_objects[1].matrix_radar_blobs
+        # Begin Loop through each cluster
+        for j in np.unique(self.list_of_frame_matrix_objects[0].matrix_radar_blobs):
+            if j==0:
+                continue
+            shifted = ndimage.shift(return_single_cluster(self.list_of_frame_matrix_objects[0].matrix_radar_blobs, j),
+                                    (yshift, xshift))
+            n_1 = self.list_of_frame_matrix_objects[1].matrix_radar_blobs
 
-        shifted = self.return_binary(shifted)
-        n_1_binary = self.return_binary(n_1)
+            shifted = return_binary(shifted)
+            n_1_binary = return_binary(n_1)
 
-        overlap = np.copy(n_1)
+            overlap = np.copy(n_1)
 
-        overlap[np.equal(n_1_binary, shifted)==False] = 0
+            overlap[np.equal(n_1_binary, shifted)==False] = 0
 
-        # plt.imshow(self.list_of_frame_matrix_objects[1].matrix_radar_blobs, cmap='spectral')
-        # plt.imshow(shifted, cmap='spectral', alpha=.3)
+            # Now to test the overlap percentage
+            # A is the overlap area
+            list_of_overlap_blobs = np.unique(overlap)
+            print
+            print "New Blob"
+            for i in list_of_overlap_blobs:
+                if i == 0:
+                    continue
+                print
+                print "n:", j
+                print "n + 1:", i
+                a = float((overlap == i).sum())
+                at = float((n_1 == i).sum())
+                bt = shifted.sum()
+                print 100 * a / at
+                print 100 * a / bt
 
-        # plt.imshow(n_1_binary, cmap='spectral')
-        # plt.imshow(shifted, cmap='spectral', alpha=.3)
+                n_file_code = self.list_of_frame_matrix_objects[0].file_code
+                n_1_file_code = self.list_of_frame_matrix_objects[1].file_code
 
-        # plt.imshow(overlap, cmap='spectral')
+                # Check if a match exists
+                if 100*a/at + 100*a/bt > 60:
+                    d = track_slice_dictionary
+                    self.list_of_frame_matrix_objects[0].list_of_track_slices[d[n_file_code][j]].end_ids.append(
+                        str(n_1_file_code) + str(i))
+                    self.list_of_frame_matrix_objects[1].list_of_track_slices[d[n_1_file_code][i]].start_ids.append(
+                        str(n_file_code) + str(j))
+
+
+
+            # plt.imshow(self.list_of_frame_matrix_objects[1].matrix_radar_blobs, cmap='spectral')
+            # plt.imshow(shifted, cmap='spectral', alpha=.3)
+
+            # plt.imshow(n_1_binary, cmap='spectral')
+            # plt.imshow(shifted, cmap='spectral', alpha=.3)
+
+            #plt.imshow(overlap, cmap='spectral')
+
+            # plt.show()
+            # plt.close()
 
         
 
@@ -561,6 +556,33 @@ class SCIT:
             i += 1
 
 
+def calc_dist(p1x, p1y, p2x, p2y):
+        return sqrt(pow((p1x - p2x), 2) + pow((p1y - p2y), 2))
+
+
+def calc_dir(x1, y1, x2, y2):
+    angle = degrees(atan2(y2 - y1, x2 - x1))
+    direction = (90 - angle) % 360
+    return direction
+
+
+def return_single_cluster(input_cluster, n):
+    out_cluster = np.copy(input_cluster)
+
+    # For elements above threshold, make value of 1
+    out_cluster[input_cluster == n] = n
+    # All other elements equal zero
+    out_cluster[input_cluster != n] = 0
+    return out_cluster
+
+
+def return_binary(input_cluster):
+    binary_matrix = np.copy(input_cluster)
+    # For elements above threshold, make value of 1
+    binary_matrix[input_cluster > 0] = 1
+    # All other elements equal zero
+    binary_matrix[input_cluster <= 0] = 0
+    return binary_matrix
 
 
 base_path = "C:\Users\Nathan\Documents\Storm Chasing\\temp2\\"
