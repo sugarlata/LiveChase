@@ -164,15 +164,11 @@ class GPSKMLObj:
         trk.stylemap.normalstyle.linestyle.width = 6
 
         kml.save(self.root_path + self.date_path + "\GPS\\" + kml_file)
-        print "KML Updated"
+        print "KML Updated:", arrow.now().to('Australia/Melbourne').format('HH:mm:ss')
 
 
 if __name__ == '__main__':
-    freeze_support()
-    gps_csv = GPSCSVObj()
     gps_kml = GPSKMLObj()
-    csv_thread = Process(target=gps_csv.create_gps_csv)
-    csv_thread.start()
 
     while True:
         gps_kml.create_recent_kml()

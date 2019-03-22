@@ -1,0 +1,9 @@
+http://www.bom.gov.au/weather-services/announcements/himawari-replacement-product-list.shtml
+
+Satellite Images:
+ftp://ftp.bom.gov.au/anon/gen/gms/
+
+http://www.data.jma.go.jp/mscweb/en/himawari89/space_segment/spsg_ahi.html
+
+http://www.bom.gov.au/australia/satellite/himawari.shtml
+

@@ -979,12 +979,10 @@ class ProcessObs:
 if __name__ == '__main__':
     p_obs = ProcessObs()
 
-    p_obs.create_all_overlays()
-    p_obs.create_current_overlays()
+    #p_obs.create_all_overlays()
     p_obs.create_current_obs_graphs()
 
     p_obs.create_obs_kml()
-    p_obs.create_overlays_kml()
 
     finish_time = arrow_now().timestamp
 

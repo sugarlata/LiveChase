@@ -300,6 +300,20 @@ class TrackSlice:
 
         self.cell_id = cell_id
         self.cluster_number = cluster_number
+        self.centroid = ""
+class TrackSlice:
+
+    def __init__(self, cell_id, cluster_number):
+
+        self.start_ids = []
+        self.end_ids = []
+        self.polygon_points = ""
+        self.volume = 0
+        self.volume_matrix = ""
+
+        self.cell_id = cell_id
+        self.cluster_number = cluster_number
+        self.centroid = ""
 
 
 class SCIT:
@@ -308,6 +322,7 @@ class SCIT:
 
         self.list_of_frame_matrix_objects = []
         self.base_path = basepath
+        self.track_slice_dictionary = ""
 
     def load_matrices(self, threshold, pixel_threshold):
 
@@ -340,9 +355,6 @@ class SCIT:
 
     def identify_tracks(self):
 
-        
-        # Function to calculate the distance between two pixels. Assuming Flat Earth (makes the math easier)
-
         # Loop to create centroid objects
         for i in self.list_of_frame_matrix_objects:
             i.find_centroids()
@@ -363,13 +375,13 @@ class SCIT:
                 # Create a matrix for the individual cell
                 matrix_blob = np.copy(j.matrix_radar_blobs)
                 matrix_blob[j.matrix_radar_blobs != cluster_number_short] = 0
-                #j.list_of_track_slices[0].polygon_points = matrix_blob
+                j.list_of_track_slices[0].polygon_points = matrix_blob
     
                 # Calculate the volume according to intensity
                 volume_matrix = np.multiply(matrix_blob, np.flipud(j.matrix_radar_finished))
-                #j.list_of_track_slices[0].volume_matrix = volume_matrix
+                j.list_of_track_slices[0].volume_matrix = volume_matrix
                 volume = np.sum(volume_matrix)
-                #j.list_of_track_slices[0].volume_matrix = volume
+                j.list_of_track_slices[0].volume_matrix = volume
 
         # Create dictionary for the track objects in form:
 
@@ -384,157 +396,162 @@ class SCIT:
                 track_slice_dictionary[str(self.list_of_frame_matrix_objects[j].file_code)][
                     self.list_of_frame_matrix_objects[j].list_of_track_slices[i].cluster_number] = i
 
+        self.track_slice_dictionary = track_slice_dictionary
         # For printing out the dictionary
         # for j in track_slice_dictionary:
         #     for i in track_slice_dictionary[j]:
         #         print j, i, track_slice_dictionary[j][i]
 
+
         # Begin Loop to analyse
         # Need to calculate the average distance
         # Calculate the distance between each centroid from one frame to the next, keep the shortest one
         # TODO Need to cycle through all the images on the list, instead of just these two
-        centroid_list_n = self.list_of_frame_matrix_objects[0].cluster_centroids
-        centroid_list_n_1 = self.list_of_frame_matrix_objects[1].cluster_centroids
 
-        centroid_couples = []
+        m=2
 
-        for i in centroid_list_n:
-            distance_array = []
-            for j in centroid_list_n_1:
-                distance_array.append([calc_dist(i.x, i.y, j.x, j.y),0, [i, j]])
+        for m in range(0, len(self.list_of_frame_matrix_objects)-1):
 
-            centroid_couples.append(min(distance_array))
+            n=m+1
+            centroid_list_n = self.list_of_frame_matrix_objects[m].cluster_centroids
+            centroid_list_n_1 = self.list_of_frame_matrix_objects[n].cluster_centroids
 
-        centroid_couples = np.asarray(centroid_couples)
+            centroid_couples = []
 
-        std = centroid_couples[:,0].std()
+            for i in centroid_list_n:
+                distance_array = []
+                for j in centroid_list_n_1:
+                    distance_array.append([calc_dist(i.x, i.y, j.x, j.y),0, [i, j]])
 
-        # TODO Code in how to handle standard deviation for different radar ranges, 64km, 128km, 256km
-        while std > 10:  # This will change depending on the range of the radar
-            # Remove the centroid couple that has the largest distance.
-            centroid_couples = centroid_couples[~(centroid_couples==max(centroid_couples[:,0])).any(1)]
+                centroid_couples.append(min(distance_array))
+
+            centroid_couples = np.asarray(centroid_couples)
+
             std = centroid_couples[:,0].std()
 
-        # This is the average distance.
-        average_distance = np.average(centroid_couples[:,0].tolist())
+            # TODO Code in how to handle standard deviation for different radar ranges, 64km, 128km, 256km
+            while std > 10:  # This will change depending on the range of the radar
+                # Remove the centroid couple that has the largest distance.
+                centroid_couples = centroid_couples[~(centroid_couples==max(centroid_couples[:,0])).any(1)]
+                std = centroid_couples[:,0].std()
 
-        # Now need to find the average direction
-        # Direction will be a number between 0 and 360
+            # This is the average distance.
+            average_distance = np.average(centroid_couples[:,0].tolist())
 
-        # For each centroid pair, calculate the direction
-        for i in range(0,len(centroid_couples)):
-            x1 = centroid_couples[i][2][0].x
-            y1 = centroid_couples[i][2][0].y
-            x2 = centroid_couples[i][2][1].x
-            y2 = centroid_couples[i][2][1].y
-            centroid_couples[i][1] = calc_dir(x1, y1, x2, y2)
+            # Now need to find the average direction
+            # Direction will be a number between 0 and 360
 
-        dir_list = []
-        # Put all directions in a list, for some reason .average() isn't working for the array
-        for i in centroid_couples[:,1]:
-            dir_list.append(i)
+            # For each centroid pair, calculate the direction
+            for i in range(0,len(centroid_couples)):
+                x1 = centroid_couples[i][2][0].x
+                y1 = centroid_couples[i][2][0].y
+                x2 = centroid_couples[i][2][1].x
+                y2 = centroid_couples[i][2][1].y
+                centroid_couples[i][1] = calc_dir(x1, y1, x2, y2)
 
-        # Find the std dev and the average
-        std = np.asarray(dir_list).std()
-        ave = np.average(dir_list)
+            dir_list = []
+            # Put all directions in a list, for some reason .average() isn't working for the array
+            for i in centroid_couples[:,1]:
+                dir_list.append(i)
 
-        while std > 30:  # This will change depending on the range of the radar
-
-            ave = np.average(dir_list)
-            # Biggest outlier is the one that is furtherest from the average
-            biggest_outlier = centroid_couples[(np.fabs(np.asarray(dir_list) - ave) == max(np.fabs(np.asarray(dir_list)
-                                                                                                   - ave)))][0][1]
-            # Remove the centroid couple that contains the biggest outlier
-            centroid_couples = centroid_couples[~(centroid_couples == biggest_outlier).any(1)]
-            # Remove it from the directions list
-            dir_list.remove(biggest_outlier)
-            # Calculate the new std dev.
+            # Find the std dev and the average
             std = np.asarray(dir_list).std()
+            ave = np.average(dir_list)
 
-        # This is the average direction
-        average_direction = ave
+            while std > 30:  # This will change depending on the range of the radar
 
-        print
-        print "Centroid Couples Distance and Direction"
-        for i in centroid_couples:
-            print i[0], i[1], i[2]
-        print
-        print "Average Distance:", average_distance
-        print "Average Direction:", average_direction
+                ave = np.average(dir_list)
+                # Biggest outlier is the one that is furtherest from the average
+                biggest_outlier = centroid_couples[(np.fabs(np.asarray(dir_list) - ave) == max(np.fabs(np.asarray(dir_list)
+                                                                                                       - ave)))][0][1]
+                # Remove the centroid couple that contains the biggest outlier
+                centroid_couples = centroid_couples[~(centroid_couples == biggest_outlier).any(1)]
+                # Remove it from the directions list
+                dir_list.remove(biggest_outlier)
+                # Calculate the new std dev.
+                std = np.asarray(dir_list).std()
 
-        x1 = []
-        y1 = []
-        # x2 = []
-        # y2 = []
-        labels = []
+            # This is the average direction
+            average_direction = ave
 
-        for i in self.list_of_frame_matrix_objects[0].cluster_centroids:
-            x1.append(i.x)
-            y1.append(512-i.y)
-            # x2.append(i[2][1].x)
-            # y2.append(i[2][1].y)
-            # labels.append(i[1])
-
-        xshift = int(round(average_distance * sin((90 + 2 * (90 - average_direction)) * pi / 180),0))
-        yshift = int(round(average_distance * sin((90 + 2 * (90 - average_direction)) * pi / 180),0))
-
-        # Begin Loop through each cluster
-        for j in np.unique(self.list_of_frame_matrix_objects[0].matrix_radar_blobs):
-            if j==0:
-                continue
-            shifted = ndimage.shift(return_single_cluster(self.list_of_frame_matrix_objects[0].matrix_radar_blobs, j),
-                                    (yshift, xshift))
-            n_1 = self.list_of_frame_matrix_objects[1].matrix_radar_blobs
-
-            shifted = return_binary(shifted)
-            n_1_binary = return_binary(n_1)
-
-            overlap = np.copy(n_1)
-
-            overlap[np.equal(n_1_binary, shifted)==False] = 0
-
-            # Now to test the overlap percentage
-            # A is the overlap area
-            list_of_overlap_blobs = np.unique(overlap)
             print
-            print "New Blob"
-            for i in list_of_overlap_blobs:
-                if i == 0:
+            print "Centroid Couples Distance and Direction"
+            for i in centroid_couples:
+                print i[0], i[1], i[2]
+            print
+            print "Average Distance:", average_distance
+            print "Average Direction:", average_direction
+
+            x1 = []
+            y1 = []
+            # x2 = []
+            # y2 = []
+            labels = []
+
+            for i in self.list_of_frame_matrix_objects[m].cluster_centroids:
+                x1.append(i.x)
+                y1.append(512-i.y)
+                # x2.append(i[2][1].x)
+                # y2.append(i[2][1].y)
+                # labels.append(i[1])
+
+            xshift = int(round(average_distance * sin((90 + 2 * (90 - average_direction)) * pi / 180),0))
+            yshift = int(round(average_distance * sin((90 + 2 * (90 - average_direction)) * pi / 180),0))
+
+            # Begin Loop through each cluster
+            for j in np.unique(self.list_of_frame_matrix_objects[m].matrix_radar_blobs):
+                if j==0:
                     continue
-                print
-                print "n:", j
-                print "n + 1:", i
-                a = float((overlap == i).sum())
-                at = float((n_1 == i).sum())
-                bt = shifted.sum()
-                print 100 * a / at
-                print 100 * a / bt
+                shifted = ndimage.shift(return_single_cluster(self.list_of_frame_matrix_objects[m].matrix_radar_blobs, j),
+                                        (yshift, xshift))
+                n_1 = self.list_of_frame_matrix_objects[n].matrix_radar_blobs
 
-                n_file_code = self.list_of_frame_matrix_objects[0].file_code
-                n_1_file_code = self.list_of_frame_matrix_objects[1].file_code
+                shifted = return_binary(shifted)
+                n_1_binary = return_binary(n_1)
 
-                # Check if a match exists
-                if 100*a/at + 100*a/bt > 60:
-                    d = track_slice_dictionary
-                    self.list_of_frame_matrix_objects[0].list_of_track_slices[d[n_file_code][j]].end_ids.append(
-                        str(n_1_file_code) + str(i))
-                    self.list_of_frame_matrix_objects[1].list_of_track_slices[d[n_1_file_code][i]].start_ids.append(
-                        str(n_file_code) + str(j))
+                overlap = np.copy(n_1)
+
+                overlap[np.equal(n_1_binary, shifted)==False] = 0
+
+                # Now to test the overlap percentage
+                # A is the overlap area
+                list_of_overlap_blobs = np.unique(overlap)
+                for i in list_of_overlap_blobs:
+                    if i == 0:
+                        continue
+
+                    a = float((overlap == i).sum())
+                    at = float((n_1 == i).sum())
+                    bt = shifted.sum()
+
+                    n_file_code = self.list_of_frame_matrix_objects[m].file_code
+                    n_1_file_code = self.list_of_frame_matrix_objects[n].file_code
+
+                    # Check if a match exists
+                    if 100*a/at + 100*a/bt > 60:
+                        d = track_slice_dictionary
+                        self.list_of_frame_matrix_objects[m].list_of_track_slices[d[n_file_code][j]].end_ids.append(
+                            str(n_1_file_code) + str(i))
+                        self.list_of_frame_matrix_objects[n].list_of_track_slices[d[n_1_file_code][i]].start_ids.append(
+                            str(n_file_code) + str(j))
+
+                # Finally, will be good to have th locations of the centroids in the track slices (not objects though)
+                for j in self.list_of_frame_matrix_objects:
+                    for i in j.list_of_track_slices:
+                        i.centroid = ndimage.measurements.center_of_mass(i.polygon_points)
+
+                # plt.imshow(self.list_of_frame_matrix_objects[1].matrix_radar_blobs, cmap='spectral')
+                # plt.imshow(shifted, cmap='spectral', alpha=.3)
+
+                # plt.imshow(n_1_binary, cmap='spectral')
+                # plt.imshow(shifted, cmap='spectral', alpha=.3)
+
+                #plt.imshow(overlap, cmap='spectral')
+
+                # plt.show()
+                # plt.close()
 
 
-
-            # plt.imshow(self.list_of_frame_matrix_objects[1].matrix_radar_blobs, cmap='spectral')
-            # plt.imshow(shifted, cmap='spectral', alpha=.3)
-
-            # plt.imshow(n_1_binary, cmap='spectral')
-            # plt.imshow(shifted, cmap='spectral', alpha=.3)
-
-            #plt.imshow(overlap, cmap='spectral')
-
-            # plt.show()
-            # plt.close()
-
-        
 
 
     def create_pretty_pictures(self):
@@ -554,6 +571,38 @@ class SCIT:
 
             print str(int(round(100.0*i/j, 0))) + "% Completed"
             i += 1
+
+
+    def create_even_prettier_pictures(self):
+
+        centroid_locations = []
+
+        for m in range(0, len(self.list_of_frame_matrix_objects)-1):
+
+            arrow_list = []
+            n=m+1
+
+            for i in self.list_of_frame_matrix_objects[m].list_of_track_slices:
+                centroid_locations.append(i.centroid)
+                y1, x1 = i.centroid
+                for t in i.end_ids:
+                    n_1_file_code = t[:12]
+                    n_1_cluster_number = t[12:]
+                    d = self.track_slice_dictionary
+                    y2, x2 = self.list_of_frame_matrix_objects[n].list_of_track_slices[d[n_1_file_code][int(n_1_cluster_number)]].centroid
+                    arrow_list.append((x1,y1,x2,y2))
+
+            print arrow_list
+
+            for i in arrow_list:
+                plt.arrow(i[0],i[1],i[2]-i[0],i[3]-i[1], color=(1,1,1))
+
+            plt.imshow((self.list_of_frame_matrix_objects[m].matrix_radar_blobs), cmap='spectral', alpha=.4)
+            plt.imshow((self.list_of_frame_matrix_objects[n].matrix_radar_blobs), cmap='spectral', alpha=.4)
+            # plt.xlim([0, 512])
+            # plt.ylim([0,512])
+            plt.show()
+            plt.close()
 
 
 def calc_dist(p1x, p1y, p2x, p2y):
@@ -585,12 +634,15 @@ def return_binary(input_cluster):
     return binary_matrix
 
 
-base_path = "C:\Users\Nathan\Documents\Storm Chasing\\temp2\\"
-#base_path = "C:\Users\Nathan\Documents\Storm Chasing\Chases\\2016-12-24\Radar\IDR023\\"
+if __name__ == "__main__":
 
-main_scit = SCIT(base_path)
-print "Begin loading matrices"
-main_scit.load_matrices(4, 60)
-# print "Begin creating pictures"
-#main_scit.create_pretty_pictures()
-main_scit.identify_tracks()
+    base_path = "C:\Users\Nathan\Documents\Storm Chasing\\temp2\\"
+    #base_path = "C:\Users\Nathan\Documents\Storm Chasing\Chases\\2016-12-24\Radar\IDR023\\"
+
+    main_scit = SCIT(base_path)
+    print "Begin loading matrices"
+    main_scit.load_matrices(4, 60)
+    # print "Begin creating pictures"
+    main_scit.create_pretty_pictures()
+    main_scit.identify_tracks()
+    main_scit.create_even_prettier_pictures()

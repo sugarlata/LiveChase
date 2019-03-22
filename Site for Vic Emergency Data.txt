@@ -1,0 +1,1 @@
+http://emergency.vic.gov.au/public/osom-geojson.json

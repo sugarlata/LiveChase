@@ -56,7 +56,7 @@ def create_incidents_kml():
 
                 else:
                     back_limit = arrow.now().timestamp - (incidents_from_last_x_hours * 60 * 60)
-                    if arrow.get(created).timestamp > back_limit:
+                    if int(arrow.get(created).timestamp) > int(back_limit):
                         incidents_lists.append(Incident(lat, lon, source, source_title, category1, category2, created,
                                                         id_tag, location, resources, status))
                         print i, "Limited"
@@ -99,9 +99,8 @@ def create_incidents_kml():
         current_incident = incidents_lists[i]
 
         points_list.append(incident_folder.newpoint(name=str(current_incident.get_category1())))
-
         points_list[i].timespan.begin = arrow.get(current_incident.get_created())
-        points_list[i].timespan.end = arrow.get(current_incident.get_created() + (120*60))
+        points_list[i].timespan.end = arrow.now()
 
         lat = incidents_lists[i].get_lat_lon()[0]
         lon = incidents_lists[i].get_lat_lon()[1]
@@ -119,7 +118,7 @@ def create_incidents_kml():
         str_resources = str(current_incident.get_resources())
         str_status = current_incident.get_status()
 
-        str_created_formatted = arrow.get(str_created).format('YYYY-MM-DD HH:mm:ss')
+        str_created_formatted = arrow.get(str_created).to('Australia/Melbourne').format('DD/MM/YY   HH:mm')
 
         points_list[i].description = description_html.replace('$ID$', str_id).replace('$SOURCE$', str_source).replace('$SOURCE_TITLE$', str_source_title).replace('$CAT1$', str_cat1).replace('$CAT2$', str_cat2).replace('$CREATED$', str_created_formatted).replace('$LOCATION$', str_location).replace('$RESOURCES$', str_resources).replace('$STATUS$', str_status)
 
@@ -141,6 +140,7 @@ def create_incidents_kml():
         points_list2[i].coords = [(lon, lat)]
 
         points_list2[i].style.iconstyle.icon.href = "http://maps.google.com/mapfiles/kml/paddle/red-stars.png"
+        points_list2[i].visibility = 0
 
     try:
         os.chdir(root_folder + date_path)
@@ -159,5 +159,5 @@ def create_incidents_kml():
     kml.save(backup_save)
 
 
-create_incidents_kml()
-
+if __name__ == '__main__':
+    create_incidents_kml()

@@ -1,0 +1,11 @@
+Code - Site
+Name - 2
+Date Time - 
+Temperature - 18
+Dew Point - 19
+Rain - 24
+Pressure - 20
+Relative Humidity - 25
+LCL (Calculated)
+Wind Vel - 33
+

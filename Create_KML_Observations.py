@@ -204,7 +204,7 @@ def create_vic_overlays():
         if i > 0:
             wind_vel_overlays[i - 1].visibility = 0
 
-    kml.save(root_folder + date_path + "\Vic Overlay.kml")
+    kml.save(root_folder + date_path + "\Victoria Overlays.kml")
 
 def create_vic_obs_points(obs_list):
     pass
@@ -220,7 +220,8 @@ def create_vic_obs_points(obs_list):
     kml = simplekml.Kml()
     kml_obs_folder = kml.newfolder(name='Victorian Observation Locations')
     location_list = []
-
+    obs_dir_list = listdir(root_folder + date_path + "\Observations\\")
+    
     description_block = r"""<![CDATA[<font size = "6">
 <h1>$NAME</h1>
 <h2>Observations:</h2>
@@ -294,6 +295,38 @@ def create_vic_obs_points(obs_list):
         lcl = obs_list[i].lcl
         wind_vel = obs_list[i].wind_vel
 
+        grs_dew = []
+        grs_lcl = []
+        grs_pressure = []
+        grs_rain = []
+        grs_rel_hum = []
+        grs_temp = []
+        grs_wind_vel = []
+        
+        for f in obs_dir_list:
+            if str(obs_list[i].code + '-temperature-') in f:
+                grs_temp.append(f)
+            if str(obs_list[i].code + '-pressure-') in f:
+                grs_pressure.append(f)
+            if str(obs_list[i].code + '-dew-point-') in f:
+                grs_dew.append(f)
+            if str(obs_list[i].code + '-wind-') in f:
+                grs_wind_vel.append(f)
+            if str(obs_list[i].code + '-lcl-') in f:
+                grs_lcl.append(f)
+            if str(obs_list[i].code + '-rel_hum-') in f:
+                grs_rel_hum.append(f)
+            if str(obs_list[i].code + '-rain-') in f:
+                grs_rain.append(f)
+        
+        grs_dew.sort()
+        grs_lcl.sort()
+        grs_pressure.sort()
+        grs_rain.sort()
+        grs_rel_hum.sort()
+        grs_temp.sort()
+        grs_wind_vel.sort()
+
         location_list.insert(i, kml_obs_folder.newpoint(name=station_name))
         location_list[i].coords = [(lon, lat)]
         location_list[i].style.iconstyle.icon.href = 'http://maps.google.com/mapfiles/kml/paddle/ylw-blank.png'
@@ -314,87 +347,58 @@ def create_vic_obs_points(obs_list):
         time_now = arrow_now().to('Australia/Melbourne').format('YYYY-MM-DD') + ' ' + obs_list[i].time
         time_fn = arrow_get(time_now, 'YYYY-MM-DD HH:mm', tzinfo="Australia/Melbourne").to('Australia/Melbourne').format('HH-mm')
 
-        gr_temp = root_folder + date_path + "\Observations\\" + obs_list[i].code + '-temperature-' + time_fn + '.png'
-        try:
-            with open(gr_temp, 'r'):
-                gr_temp = "file:///" + gr_temp.replace("\\", "/").replace(" ", "%20").lower()
-                loc_desc = loc_desc.replace('$GR_TEMP', '<img src="' + gr_temp + '" width ="1000">')
-        except IOError:
+
+
+        if len(grs_temp) == 0:
+            loc_desc = loc_desc.replace('$GR_TEMP', '<p>Graph Doesn\'t exist')
+        else:
+            gr_temp = root_folder + date_path + "\Observations\\" + grs_temp[-1]
             gr_temp = "file:///" + gr_temp.replace("\\", "/").replace(" ", "%20").lower()
-            loc_desc = loc_desc.replace('$GR_TEMP', '<img src="' + gr_temp + '" width ="1000"></p>\n<p>Graph Doesn\'t exist')
+            loc_desc = loc_desc.replace('$GR_TEMP', '<img src="' + gr_temp + '" width ="1000">')
 
-
-        gr_dew = root_folder + date_path + "\Observations\\" + obs_list[i].code + '-dew-point-' + time_fn + '.png'
-        try:
-            with open(gr_dew, 'r'):
-                gr_dew = "file:///" + gr_dew.replace("\\", "/").replace(" ", "%20").lower()
-                loc_desc = loc_desc.replace('$GR_DEW', '<img src="' + gr_dew + '"/>')
-        except IOError:
+        if len(grs_dew) == 0:
+            loc_desc = loc_desc.replace('$GR_DEW', '<p>Graph Doesn\'t exist')
+        else:
+            gr_dew = root_folder + date_path + "\Observations\\" + grs_dew[-1]
             gr_dew = "file:///" + gr_dew.replace("\\", "/").replace(" ", "%20").lower()
-            loc_desc = loc_desc.replace('$GR_DEW', '<img src="' + gr_dew + '" width ="1000"></p>\n<p>Graph Doesn\'t exist')
+            loc_desc = loc_desc.replace('$GR_DEW', '<img src="' + gr_dew + '"/>')
 
-
-        gr_rain = root_folder + date_path + "\Observations\\" + obs_list[i].code + '-rain-' + time_fn + '.png'
-        try:
-            with open(gr_rain, 'r'):
-                gr_rain = "file:///" + gr_rain.replace("\\", "/").replace(" ", "%20").lower()
-                loc_desc = loc_desc.replace('$GR_RAIN', '<img src="' + gr_rain + '"/>')
-        except IOError:
+        if len(grs_rain) == 0:
+            loc_desc = loc_desc.replace('$GR_RAIN', '<p>Graph Doesn\'t exist')
+        else:
+            gr_rain = root_folder + date_path + "\Observations\\" + grs_rain[-1]
             gr_rain = "file:///" + gr_rain.replace("\\", "/").replace(" ", "%20").lower()
-            loc_desc = loc_desc.replace('$GR_RAIN', '<img src="' + gr_rain + '" width ="1000"></p>\n<p>Graph Doesn\'t exist')
+            loc_desc = loc_desc.replace('$GR_RAIN', '<img src="' + gr_rain + '"/>')
 
-
-        gr_pressure = root_folder + date_path + "\Observations\\" + obs_list[i].code + '-pressure-' + time_fn + '.png'
-        try:
-            with open(gr_pressure, 'r'):
-                gr_pressure = "file:///" + gr_pressure.replace("\\", "/").replace(" ", "%20").lower()
-                loc_desc = loc_desc.replace('$GR_PRESSURE', '<img src="' + gr_pressure + '"/>')
-        except IOError:
+        if len(grs_pressure) == 0:
+            loc_desc = loc_desc.replace('$GR_PRESSURE', '<p>Graph Doesn\'t exist')
+        else:
+            gr_pressure = root_folder + date_path + "\Observations\\" + grs_pressure[-1]
             gr_pressure = "file:///" + gr_pressure.replace("\\", "/").replace(" ", "%20").lower()
-            loc_desc = loc_desc.replace('$GR_PRESSURE', '<img src="' + gr_pressure + '" width ="1000"></p>\n<p>Graph Doesn\'t exist')
+            loc_desc = loc_desc.replace('$GR_PRESSURE', '<img src="' + gr_pressure + '"/>')
 
-
-        gr_rel_hum = root_folder + date_path + "\Observations\\" + obs_list[i].code + '-rel_hum-' + time_fn + '.png'
-        try:
-            with open(gr_rel_hum, 'r'):
-                gr_rel_hum = "file:///" + gr_rel_hum.replace("\\", "/").replace(" ", "%20").lower()
-                loc_desc = loc_desc.replace('$GR_REL_HUM', '<img src="' + gr_rel_hum + '"/>')
-        except IOError:
+        if len(grs_rel_hum) == 0:
+            loc_desc = loc_desc.replace('$GR_REL_HUM', '<p>Graph Doesn\'t exist')
+        else:
+            gr_rel_hum = root_folder + date_path + "\Observations\\" + grs_rel_hum[-1]
             gr_rel_hum = "file:///" + gr_rel_hum.replace("\\", "/").replace(" ", "%20").lower()
-            loc_desc = loc_desc.replace('$GR_REL_HUM', '<img src="' + gr_rel_hum + '" width ="1000"></p>\n<p>Graph Doesn\'t exist')
+            loc_desc = loc_desc.replace('$GR_REL_HUM', '<img src="' + gr_rel_hum + '"/>')
 
-
-        gr_lcl = root_folder + date_path + "\Observations\\" + obs_list[i].code + '-lcl-' + time_fn + '.png'
-        try:
-            with open(gr_lcl, 'r'):
-                gr_lcl = "file:///" + gr_lcl.replace("\\", "/").replace(" ", "%20").lower()
-                loc_desc = loc_desc.replace('$GR_LCL', '<img src="' + gr_lcl + '"/>')
-        except IOError:
+        if len(grs_lcl) == 0:
+            loc_desc = loc_desc.replace('$GR_LCL', '<p>Graph Doesn\'t exist')
+        else:
+            gr_lcl = root_folder + date_path + "\Observations\\" + grs_lcl[-1]
             gr_lcl = "file:///" + gr_lcl.replace("\\", "/").replace(" ", "%20").lower()
-            loc_desc = loc_desc.replace('$GR_LCL', '<img src="' + gr_lcl + '" width ="1000"></p>\n<p>Graph Doesn\'t exist')
+            loc_desc = loc_desc.replace('$GR_LCL', '<img src="' + gr_lcl + '"/>')
 
-
-        gr_wind_vel = root_folder + date_path + "\Observations\\" + obs_list[i].code + '-wind-' + time_fn + '.png'
-        try:
-            with open(gr_wind_vel, 'r'):
-                gr_wind_vel = "file:///" + gr_wind_vel.replace("\\", "/").replace(" ", "%20").lower()
-                loc_desc = loc_desc.replace('$GR_WIND_VEL', '<img src="' + gr_wind_vel + '"/>')
-        except IOError:
+        if len(grs_wind_vel) == 0:
+            loc_desc = loc_desc.replace('$GR_WIND_VEL', '<p>Graph Doesn\'t exist')
+        else:
+            gr_wind_vel = root_folder + date_path + "\Observations\\" + grs_wind_vel[-1]
             gr_wind_vel = "file:///" + gr_wind_vel.replace("\\", "/").replace(" ", "%20").lower()
-            loc_desc = loc_desc.replace('$GR_WIND_VEL', '<img src="' + gr_wind_vel + '" width ="1000"></p>\n<p>Graph Doesn\'t exist')
-
-
-
-
-
-
-
-
-
-
-
+            loc_desc = loc_desc.replace('$GR_WIND_VEL', '<img src="' + gr_wind_vel + '"/>')
 
         location_list[i].description = loc_desc
 
-    kml.save('C:\\Users\\Nathan\\Documents\\Storm Chasing\\temph.kml')
+    kml.save('C:\\Users\\Nathan\\Documents\\Storm Chasing\\Chases\\' + date_path + '\\Observations.kml')
     print "kml created"
